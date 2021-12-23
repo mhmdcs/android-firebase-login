@@ -37,7 +37,7 @@ class MainFragment : Fragment() {
 
     companion object {
         const val TAG = "MainFragment"
-        const val SIGN_IN_RESULT_CODE = 1001
+        const val SIGN_IN_REQUEST_CODE = 1001
     }
 
     // Get a reference to the ViewModel scoped to this Fragment
@@ -61,15 +61,27 @@ class MainFragment : Fragment() {
         observeAuthenticationState()
 
         binding.authButton.setOnClickListener {
-            // TODO call launchSignInFlow when authButton is clicked
+            launchSignInFlow()
         }
     }
 
+    //Listen to the result of the sign in process by filtering for when SIGN_IN_RESULT_CODE is passed back. Start by having log statements to know whether the user has signed in successfully
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
-        // TODO Listen to the result of the sign in process by filter for when
-        //  SIGN_IN_REQUEST_CODE is passed back. Start by having log statements to know
-        //  whether the user has signed in successfully
+        //listening to the SIGN_IN_REQUEST_CODE to come back, once we know that we are processing the result of our login, we parse it down even further
+        if (requestCode == SIGN_IN_REQUEST_CODE) {
+            //get the response from the resulting intent
+            val response = IdpResponse.fromResultIntent(data)
+            if (resultCode == Activity.RESULT_OK) { //check the result code to see what the result of the login was, if the result was RESULT_OK then we know the user has signed in successfully
+                // User successfully signed in
+                Log.i(TAG, "Successfully signed in user ${FirebaseAuth.getInstance().currentUser?.displayName}!")
+            } else {//if the result code is not RESULT_OK, then we know the login has failed
+                // Sign in failed. If response is null the user canceled the
+                // sign-in flow using the back button. Otherwise check
+                // response.getError().getErrorCode() and handle the error.
+                Log.i(TAG, "Sign in unsuccessful ${response?.error?.errorCode}")
+            }
+        }
     }
 
     /**
@@ -103,8 +115,28 @@ class MainFragment : Fragment() {
         )
     }
 
+    //The sign-in UI flow will be handled for us since we're using Firebase UI library
     private fun launchSignInFlow() {
-        // TODO Complete this function by allowing users to register and sign in with
-        //  either their email address or Google account.
+        // Give users the option to sign in / register with their email or Google account.
+        // If users choose to register with their email,
+        // they will need to create a password as well.
+        val providers = arrayListOf(
+            AuthUI.IdpConfig.EmailBuilder().build(), AuthUI.IdpConfig.GoogleBuilder().build()
+            // This is where you can provide more ways for users to register and
+            // sign in.
+        )
+
+        // Create and launch the sign-in intent.
+        // We listen to the response of this activity with the
+        // SIGN_IN_REQUEST_CODE
+        startActivityForResult( //startActivityForResult method utilizes Firebase UI library to launch the sign-in flow for us.
+            //With the help of android startActivityForResult() method, we can send information from one activity to another and vice-versa. The android startActivityForResult method, requires a result from the second activity (activity to be invoked).
+            AuthUI.getInstance()
+                .createSignInIntentBuilder()
+                .setAvailableProviders(providers)
+                .build(),
+            SIGN_IN_REQUEST_CODE //listen to the result of the sign-in process with this request code we declared in a companion object
+            //we can also listen to the result of the sign-in process by filtering for when this request code is passed back in onActivityResult
+        )
     }
 }
