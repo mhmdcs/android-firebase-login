@@ -46,6 +46,7 @@ class LoginFragment : Fragment() {
     // Get a reference to the ViewModel scoped to this Fragment.
     private val viewModel by viewModels<LoginViewModel>()
 
+
     private lateinit var navController: NavController
 
     override fun onCreateView(
@@ -71,7 +72,21 @@ class LoginFragment : Fragment() {
             navController.popBackStack(R.id.mainFragment, false)
         }
 
+        // Observe the authentication state so we can know if the user has logged in successfully.
+        // If the user has logged in successfully, bring them back to the settings screen.
+        // If the user did not log in successfully, display an error message.
+        viewModel.authenticationState.observe(viewLifecycleOwner, Observer { authenticationState ->
+            when (authenticationState) {
+                LoginViewModel.AuthenticationState.AUTHENTICATED -> navController.popBackStack()
+                else -> Log.e(
+                    TAG,
+                    "Authentication state that doesn't require any UI change $authenticationState"
+                )
+            }
+        })
+
     }
+
 
     private fun launchSignInFlow() {
         // Give users the option to sign in / register with their email or Google account. If users
